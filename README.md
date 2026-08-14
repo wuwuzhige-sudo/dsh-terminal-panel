@@ -45,35 +45,33 @@ Then hard-refresh (Ctrl+Shift+R) the `dsh web` page — the **Terminal** tab app
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `trustedHosts` | `string[]` | `[]` | Extra hostnames (besides loopback) allowed to call the terminal RPC. Required when the web UI is served through a reverse proxy / Tailscale Serve with a real hostname. |
-
-## Security
-
-> ⚠️ **This plugin executes arbitrary commands on the harness host.** Anyone who can reach the `/sxec/*` endpoints can run commands as the harness user.
-
-- Requests are accepted **only** from loopback hosts or hosts listed in `trustedHosts` (DNS-rebinding defence).
-- There is **no built-in authentication** — protect the web server itself with a reverse-proxy auth layer (e.g. Caddy `basic_auth`) when exposing it beyond localhost.
-- The endpoint inherits the exposure of whatever fronts the dsh web server: bind it to loopback only, or put an authenticated proxy in front.
-
-## How it works
-
-- **Host half** (`lib/index.js`): a dsh plugin that registers a `/sxec/*` route family on the harness webserver (`term-init`, `term-run`, `term-send`, `term-signal`, `term-reset`, `term-read`). Commands run either locally via `node:child_process` (bypassing the harness subprocess sandbox) or through `ssh -T` when `sshTarget` is configured; output is ANSI-sanitised and buffered.
-- **Client half** (`lib/client.js`): registers the Terminal slot in `conversation.view` and talks to the host via same-origin `fetch('/sxec/*')` calls (no WebSocket, no extra ports).
-
-## Configuration
-
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `trustedHosts` | `string[]` | `[]` | Extra hostnames (besides loopback) allowed to call the terminal RPC. Required when the web UI is served through a reverse proxy / Tailscale Serve with a real hostname. |
 | `sshTarget` | `string` | `''` | SSH target for command execution, e.g. `user@127.0.0.1` or `user@my-server`. Empty = run commands locally. |
 | `sshIdentity` | `string` | `~/.ssh/dsh-terminal` | SSH identity file used for `sshTarget`. |
+| `sshUser` | `string` | `''` | SSH username when `sshTarget` holds a bare host. |
+| `sshPassword` | `string` | `''` | SSH password (delivered via `SSH_ASKPASS`, never through a pty prompt). Empty = key auth. |
+
+### Runtime configuration (no restart needed)
+
+Open the **⚙** button in the panel (or the first-run setup panel when no
+target is configured) and set host / username / password / key path. Settings
+persist in `~/.local/share/dsh-terminal-panel/config.json` and take effect on
+the next command — no `cordis.patch.yml` edits or service restarts. The panel
+lists the host's detected addresses (Tailscale IP first) for convenience, and
+a **one-click key initialisation** for localhost targets.
 
 ### SSH mode (why you want it)
 
 When dsh runs sandboxed (bwrap/user namespace — the default on Linux), the
-process cannot `setuid`, so **sudo is unusable** in local mode. Point the
-panel at SSH instead — commands then execute in the **host namespace** of the
-sshd server, where sudo works normally. The same mechanism turns the panel
-into a remote terminal for **any** SSH host:
+process cannot `setuid`, so **sudo is unusable** in local mode. In SSH mode
+the panel keeps **one persistent `ssh -t` session (pseudo-tty)** per terminal,
+exactly like an SSH client:
+
+- commands run in the **host namespace** of the sshd server → setuid/sudo work
+- **sudo asks for the password only once per 15 minutes** (credential cache
+  is bound to the session's tty, just like a normal SSH terminal)
+- `cd` and environment persist natively inside the session
+- interactive programs (top, htop, …) work
+- the same mechanism turns the panel into a remote terminal for **any** SSH host:
 
 ```yaml
 - insert:
@@ -84,7 +82,7 @@ into a remote terminal for **any** SSH host:
           - myhost.tailXXXX.ts.net
         sshTarget: user@127.0.0.1        # localhost: sudo works
         # sshTarget: user@remote-host   # or any SSH host
-        sshIdentity: /home/ql/.ssh/dsh-terminal
+        sshIdentity: /home/<user>/.ssh/dsh-terminal
 ```
 
 Set up the identity once (one command, no password prompts afterwards):
@@ -100,6 +98,20 @@ echo "restrict,no-user-rc $(cat ~/.ssh/dsh-terminal.pub)" >> ~/.ssh/authorized_k
 > knows when the remote command finished (it is stripped from the display).
 > Commands reading stdin (e.g. `sudo -S`) keep stdin open — type the password
 > in the panel and press Enter; the input is masked.
+
+## Security
+
+> ⚠️ **This plugin executes arbitrary commands on the harness host.** Anyone who can reach the `/sxec/*` endpoints can run commands as the target user.
+
+- Requests are accepted **only** from loopback hosts or hosts listed in `trustedHosts` (DNS-rebinding defence).
+- There is **no built-in authentication** — protect the web server itself with a reverse-proxy auth layer (e.g. Caddy `basic_auth`) when exposing it beyond localhost.
+- The SSH password (if configured) is stored in the user-level `config.json` (0600) and delivered to ssh via `SSH_ASKPASS`; prefer key auth on shared machines.
+- The endpoint inherits the exposure of whatever fronts the dsh web server: bind it to loopback only, or put an authenticated proxy in front.
+
+## How it works
+
+- **Host half** (`lib/index.js`): a dsh plugin that registers a `/sxec/*` route family on the harness webserver (`term-init`, `term-run`, `term-send`, `term-signal`, `term-reset`, `term-read`, `term-config`, `term-init-key`). Commands run either locally via `node:child_process` (bypassing the harness subprocess sandbox) or through a persistent `ssh -t` pty session when `sshTarget` is configured; output is ANSI-sanitised and buffered.
+- **Client half** (`lib/client.js`): registers the Terminal slot in `conversation.view` and talks to the host via same-origin `fetch('/sxec/*')` calls (no WebSocket, no extra ports). The ⚙ button opens the connection settings panel.
 
 ## Development
 
