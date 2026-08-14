@@ -9,7 +9,7 @@ A manual **Terminal** tab in the [DeepSeek Harness](https://github.com/deepseek-
 - **Terminal tab** in every conversation view (`对话 · 轨迹 · 终端` ordering)
 - **Manual command execution** on the host machine via the harness `subprocess` service
 - **Persistent working directory** — plain `cd` works across commands (`cd ..`, `cd ~/x`, relative paths, error messages for bad targets)
-- **sudo support** — commands starting with `sudo` run with `sudo -S`, so you can type the password into the panel while the command is busy
+- **sudo support** — commands starting with `sudo` run with `sudo -S`; the panel masks the password field while sudo is waiting (type it at the bottom line and press Enter)
 - **Command history** (↑/↓), **Ctrl+C** to interrupt the running command, **clear screen**, **reset directory**
 - **Two themes** — classic green-on-black and modern black-on-white, toggled by a button next to the panel controls; the choice persists across reloads (localStorage)
 - **ANSI escape cleanup** — raw escape sequences never reach the panel
