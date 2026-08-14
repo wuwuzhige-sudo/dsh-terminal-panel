@@ -80,7 +80,7 @@ exactly like an SSH client:
       config:
         trustedHosts:
           - myhost.tailXXXX.ts.net
-        sshTarget: user@127.0.0.1        # localhost: sudo works
+        sshTarget: user@127.0.0.1      # localhost: sudo works
         # sshTarget: user@remote-host   # or any SSH host
         sshIdentity: /home/<user>/.ssh/dsh-terminal
 ```
