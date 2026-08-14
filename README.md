@@ -56,8 +56,50 @@ Then hard-refresh (Ctrl+Shift+R) the `dsh web` page — the **Terminal** tab app
 
 ## How it works
 
-- **Host half** (`lib/index.js`): a dsh plugin that registers a `/sxec/*` route family on the harness webserver (`term-init`, `term-run`, `term-send`, `term-signal`, `term-reset`, `term-read`). Commands run through the harness `subprocess` service; output is ANSI-sanitised and buffered.
+- **Host half** (`lib/index.js`): a dsh plugin that registers a `/sxec/*` route family on the harness webserver (`term-init`, `term-run`, `term-send`, `term-signal`, `term-reset`, `term-read`). Commands run either locally via `node:child_process` (bypassing the harness subprocess sandbox) or through `ssh -T` when `sshTarget` is configured; output is ANSI-sanitised and buffered.
 - **Client half** (`lib/client.js`): registers the Terminal slot in `conversation.view` and talks to the host via same-origin `fetch('/sxec/*')` calls (no WebSocket, no extra ports).
+
+## Configuration
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `trustedHosts` | `string[]` | `[]` | Extra hostnames (besides loopback) allowed to call the terminal RPC. Required when the web UI is served through a reverse proxy / Tailscale Serve with a real hostname. |
+| `sshTarget` | `string` | `''` | SSH target for command execution, e.g. `user@127.0.0.1` or `user@my-server`. Empty = run commands locally. |
+| `sshIdentity` | `string` | `~/.ssh/dsh-terminal` | SSH identity file used for `sshTarget`. |
+
+### SSH mode (why you want it)
+
+When dsh runs sandboxed (bwrap/user namespace — the default on Linux), the
+process cannot `setuid`, so **sudo is unusable** in local mode. Point the
+panel at SSH instead — commands then execute in the **host namespace** of the
+sshd server, where sudo works normally. The same mechanism turns the panel
+into a remote terminal for **any** SSH host:
+
+```yaml
+- insert:
+    - id: dsh-terminal-panel
+      name: 'dsh-terminal-panel'
+      config:
+        trustedHosts:
+          - myhost.tailXXXX.ts.net
+        sshTarget: user@127.0.0.1        # localhost: sudo works
+        # sshTarget: user@203.0.113.10  # or any SSH host
+        sshIdentity: /home/ql/.ssh/dsh-terminal
+```
+
+Set up the identity once (one command, no password prompts afterwards):
+
+```bash
+ssh-keygen -t ed25519 -N "" -f ~/.ssh/dsh-terminal
+# allow shell access (no port forwarding etc.):
+echo "restrict,no-user-rc $(cat ~/.ssh/dsh-terminal.pub)" >> ~/.ssh/authorized_keys
+# for a remote target, add the same line to the target's authorized_keys
+```
+
+> In SSH mode a completion marker is emitted after each command so the panel
+> knows when the remote command finished (it is stripped from the display).
+> Commands reading stdin (e.g. `sudo -S`) keep stdin open — type the password
+> in the panel and press Enter; the input is masked.
 
 ## Development
 
