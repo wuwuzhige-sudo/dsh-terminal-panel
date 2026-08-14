@@ -11,6 +11,7 @@ A manual **Terminal** tab in the [DeepSeek Harness](https://github.com/deepseek-
 - **Persistent working directory** — plain `cd` works across commands (`cd ..`, `cd ~/x`, relative paths, error messages for bad targets)
 - **sudo support** — commands starting with `sudo` run with `sudo -S`, so you can type the password into the panel while the command is busy
 - **Command history** (↑/↓), **Ctrl+C** to interrupt the running command, **clear screen**, **reset directory**
+- **Two themes** — classic green-on-black and modern black-on-white, toggled by a button next to the panel controls; the choice persists across reloads (localStorage)
 - **ANSI escape cleanup** — raw escape sequences never reach the panel
 - **Output cap** — 512 KiB rolling buffer, so long-running output cannot blow up memory
 
