@@ -83,7 +83,7 @@ into a remote terminal for **any** SSH host:
         trustedHosts:
           - myhost.tailXXXX.ts.net
         sshTarget: user@127.0.0.1        # localhost: sudo works
-        # sshTarget: user@203.0.113.10  # or any SSH host
+        # sshTarget: user@remote-host   # or any SSH host
         sshIdentity: /home/ql/.ssh/dsh-terminal
 ```
 
