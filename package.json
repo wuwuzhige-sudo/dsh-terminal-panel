@@ -1,0 +1,38 @@
+{
+  "name": "dsh-terminal-panel",
+  "version": "1.0.0",
+  "description": "A manual 'Terminal' tab in the DeepSeek Harness (dsh) web conversation view — run commands on the harness host machine, with persistent cwd, sudo password prompt, and command history.",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    }
+  },
+  "files": [
+    "lib"
+  ],
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "terminal",
+    "plugin",
+    "web"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/<your-account>/dsh-terminal-panel"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
