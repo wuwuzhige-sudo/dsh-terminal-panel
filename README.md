@@ -65,7 +65,9 @@ the host's detected addresses (Tailscale IP first) for convenience, and a
 
 The SFTP tab opens at the target user's home directory and offers:
 
-- directory navigation (click, breadcrumbs, up button) with type/size/mtime columns
+- directory navigation (click, breadcrumbs, up button) with type/size columns
+- a **two-column grid, 16 items per page** with 上一页/下一页 pager buttons —
+  the panel stays the same height as the terminal (no scrolling)
 - **download** files to the browser (saved via the browser download)
 - **upload** files from the local machine (native file picker)
 - **new directory** and **delete** (files, and empty directories only)
