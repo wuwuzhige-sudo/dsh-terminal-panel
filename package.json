@@ -1,7 +1,7 @@
 {
   "name": "dsh-terminal-panel",
-  "version": "1.5.1",
-  "description": "A manual 'Terminal' tab in the DeepSeek Harness (dsh) web conversation view — run commands on the harness host machine, with persistent cwd, sudo password prompt, and command history.",
+  "version": "1.6.0",
+  "description": "Terminal + SFTP tabs in the DeepSeek Harness (dsh) web conversation view — run commands on the harness host (or any SSH host) with persistent cwd and sudo prompt, plus a file browser over the same SSH connection.",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
@@ -24,6 +24,7 @@
     "deepseek-harness",
     "dsh",
     "terminal",
+    "sftp",
     "plugin",
     "web"
   ],

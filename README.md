@@ -1,17 +1,18 @@
 # dsh-terminal-panel
 
-A manual **Terminal** tab in the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`) web conversation view. Run commands on the harness host machine directly from the browser — green-on-black classic terminal look, persistent `cwd`, `sudo` password prompt, command history.
+**Terminal + SFTP** tabs in the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`) web conversation view. Run commands on the harness host machine directly from the browser — green-on-black classic terminal look, persistent `cwd`, `sudo` password prompt, command history — and browse/transfer files over the same SSH connection with an SFTP tab.
 
 ![Terminal](docs/terminal.png)
 
 ## Features
 
-- **Terminal tab** in every conversation view (`对话 · 轨迹 · 终端` ordering)
+- **Terminal tab** in every conversation view (`对话 · 轨迹 · 终端 · SFTP` ordering)
+- **SFTP tab** right next to the terminal — file browser over the **same SSH connection** (same host / user / password / key, no second login): navigate directories, upload, download, create directories, delete files and empty directories
 - **Manual command execution** on the host machine via the harness `subprocess` service
 - **Persistent working directory** — plain `cd` works across commands (`cd ..`, `cd ~/x`, relative paths, error messages for bad targets)
 - **sudo support** — commands starting with `sudo` run with `sudo -S`; the panel masks the password field while sudo is waiting (type it at the bottom line and press Enter)
 - **Command history** (↑/↓), **Ctrl+C** to interrupt the running command, **clear screen**, **reset directory**
-- **Two themes** — classic green-on-black and modern black-on-white, toggled by a button next to the panel controls; the choice persists across reloads (localStorage)
+- **Two themes** — classic green-on-black and modern black-on-white, toggled by a button next to the panel controls; the choice persists across reloads (localStorage) and applies to both tabs
 - **ANSI escape cleanup** — raw escape sequences never reach the panel
 - **Output cap** — 512 KiB rolling buffer, so long-running output cannot blow up memory
 
@@ -38,7 +39,7 @@ EOF
 systemctl --user restart dsh-web
 ```
 
-Then hard-refresh (Ctrl+Shift+R) the `dsh web` page — the **Terminal** tab appears in the conversation view.
+Then hard-refresh (Ctrl+Shift+R) the `dsh web` page — the **终端** and **SFTP** tabs appear in the conversation view.
 
 ## Configuration
 
@@ -52,12 +53,29 @@ Then hard-refresh (Ctrl+Shift+R) the `dsh web` page — the **Terminal** tab app
 
 ### Runtime configuration (no restart needed)
 
-Open the **⚙** button in the panel (or the first-run setup panel when no
-target is configured) and set host / username / password / key path. Settings
-persist in `~/.local/share/dsh-terminal-panel/config.json` and take effect on
-the next command — no `cordis.patch.yml` edits or service restarts. The panel
-lists the host's detected addresses (Tailscale IP first) for convenience, and
-a **one-click key initialisation** for localhost targets.
+Open the **设置** button in either tab (or the first-run setup panel when no
+target is configured) and set host / username / password / key path — the
+**Terminal and SFTP tabs share this one login**. Settings persist in
+`~/.local/share/dsh-terminal-panel/config.json` and take effect on the next
+command — no `cordis.patch.yml` edits or service restarts. The panel lists
+the host's detected addresses (Tailscale IP first) for convenience, and a
+**one-click key initialisation** for localhost targets.
+
+### SFTP tab
+
+The SFTP tab opens at the target user's home directory and offers:
+
+- directory navigation (click, breadcrumbs, up button) with type/size/mtime columns
+- **download** files to the browser (saved via the browser download)
+- **upload** files from the local machine (native file picker)
+- **new directory** and **delete** (files, and empty directories only)
+
+Transfers run through the system `sftp` client in batch mode, reusing the
+terminal's SSH credentials — password auth works without extra prompts
+(`SSH_ASKPASS`), key auth is used automatically when configured. The transfer
+cap is **64 MB per file** (the payload crosses the HTTP layer as base64); for
+larger files use `scp`/`rsync` from the terminal tab. In local mode
+(`sshTarget` empty) the SFTP tab shows a hint pointing to the settings panel.
 
 ### SSH mode (why you want it)
 
@@ -110,8 +128,8 @@ echo "restrict,no-user-rc $(cat ~/.ssh/dsh-terminal.pub)" >> ~/.ssh/authorized_k
 
 ## How it works
 
-- **Host half** (`lib/index.js`): a dsh plugin that registers a `/sxec/*` route family on the harness webserver (`term-init`, `term-run`, `term-send`, `term-signal`, `term-reset`, `term-read`, `term-config`, `term-init-key`). Commands run either locally via `node:child_process` (bypassing the harness subprocess sandbox) or through a persistent `ssh -t` pty session when `sshTarget` is configured; output is ANSI-sanitised and buffered.
-- **Client half** (`lib/client.js`): registers the Terminal slot in `conversation.view` and talks to the host via same-origin `fetch('/sxec/*')` calls (no WebSocket, no extra ports). The ⚙ button opens the connection settings panel.
+- **Host half** (`lib/index.js`): a dsh plugin that registers a `/sxec/*` route family on the harness webserver (`term-init`, `term-run`, `term-send`, `term-signal`, `term-reset`, `term-read`, `term-config`, `term-init-key`, `sftp-init`, `sftp-list`, `sftp-mkdir`, `sftp-rm`, `sftp-download`, `sftp-upload`). Commands run either locally via `node:child_process` (bypassing the harness subprocess sandbox) or through a persistent `ssh -t` pty session when `sshTarget` is configured; output is ANSI-sanitised and buffered. SFTP operations spawn short-lived `sftp -b -` batch processes with the same credentials.
+- **Client half** (`lib/client.js`): registers the **终端** and **SFTP** slots in `conversation.view` and talks to the host via same-origin `fetch('/sxec/*')` calls (no WebSocket, no extra ports). Both tabs share one settings panel and one theme.
 
 ## Development
 
